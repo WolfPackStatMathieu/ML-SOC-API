@@ -1,16 +1,12 @@
-"""
-Main file for the API.
-"""
 import os
 from contextlib import asynccontextmanager
-from typing import List, Dict
-from fastapi import FastAPI
-from pydantic import BaseModel
+from typing import Dict
+from fastapi import FastAPI, HTTPException
+import mlflow
+import joblib
+import pandas as pd
 
-from app.utils import (
-    get_model,
-)
-
+from utils import get_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,37 +18,33 @@ async def lifespan(app: FastAPI):
         app (FastAPI): The FastAPI application.
     """
     global model
+    global complete_pipeline
+    
+    if "MLFLOW_TRACKING_URI" in os.environ:
+        print(os.environ["MLFLOW_TRACKING_URI"])
+    else:
+        print("MLflow was not automatically discovered, a tracking URI must be provided manually.")
 
-    model_name: str = os.getenv("MLFLOW_MODEL_NAME")
-    model_version: str = os.getenv("MLFLOW_MODEL_VERSION")
-    # Load the ML model
+    MODEL_NAME = "random_forest_detection"
+    VERSION = 2
+
+    model = mlflow.pyfunc.load_model(
+        model_uri=f"models:/{MODEL_NAME}/{VERSION}"
+    )
+
+    # Load the preprocessor pipeline
+    os.system(f"mc cp s3/mthomassin/preprocessor/complete_preprocessor_pipeline.pkl ./complete_preprocessor_pipeline.pkl")
+    complete_pipeline = joblib.load('complete_preprocessor_pipeline.pkl')
+
+    model_name = os.getenv("MLFLOW_MODEL_NAME", MODEL_NAME)
+    model_version = os.getenv("MLFLOW_MODEL_VERSION", str(VERSION))
+    print(f"model_name = {model_name}")
+    print(f"model_version = {model_version}")
+    
+    # Load the ML model using the utility function
     model = get_model(model_name, model_version)
+    
     yield
-
-
-class ActivityDescriptions(BaseModel):
-    """
-    Pydantic BaseModel for representing the input data for the API.
-    This BaseModel defines the structure of the input data required
-    for the API's "/predict-batch" endpoint.
-
-    Attributes:
-        text_descriptions (List[str]): The text descriptions.
-    """
-
-    text_descriptions: List[str]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "text_description": [
-                    (
-                        "LOUEUR MEUBLE NON PROFESSIONNEL EN RESIDENCE DE "
-                        "SERVICES (CODE APE 6820A Location de logements)"
-                    )
-                ]
-            }
-        }
 
 
 app = FastAPI(
@@ -68,36 +60,57 @@ def show_welcome_page():
     """
     Show welcome page with current model name and version.
     """
-    model_name: str = os.getenv("MLFLOW_MODEL_NAME")
-    model_version: str = os.getenv("MLFLOW_MODEL_VERSION")
+    MODEL_NAME = "random_forest_detection"
+    VERSION = 2
+    model_name = os.getenv("MLFLOW_MODEL_NAME", MODEL_NAME)
+    model_version = os.getenv("MLFLOW_MODEL_VERSION", str(VERSION))
     return {
         "message": "Request classifier",
-        "model_name": f"{model_name}",
-        "model_version": f"{model_version}",
+        "model_name": model_name,
+        "model_version": model_version,
     }
 
 
-@app.get("/predict", tags=["Predict"])
-async def predict(
-    description: str
-) -> Dict:
+@app.post("/predict", tags=["Predict"])
+async def predict(description: str) -> Dict:
     """
     Predict good or bad request.
     This endpoint accepts input data as query parameters and uses the loaded
     ML model to predict if the request is good or bad based on the input data.
 
     Args:
-
         description (str): The request.
 
     Returns:
-
         Dict: 0 or 1
     """
-    query = {
-        "query": [description],
-    }
+    try:
+        # Prepare data for prediction
+        data = pd.DataFrame({"URL": [description]})
+        
+        # Transform data using the complete pipeline
+        feature_builder = complete_pipeline.named_steps['feature_builder']
+        X_transformed, _ = feature_builder.transform(data)
+        preprocessor = complete_pipeline.named_steps['preprocessor']
+        X = preprocessor.transform(X_transformed)
 
-    predictions = model.predict(query)
+        # Make prediction
+        predictions = model.predict(X)
 
-    return predictions[0]
+        # Prepare response
+        url = data['URL'].tolist()[0].split(" ")[0]  # Extract URL before " HTTP/1.1"
+        prediction = int(predictions[0])
+
+        return {"url": url, "prediction": prediction}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"ValueError during transformation or prediction: {e}")
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"KeyError during transformation or prediction: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error during transformation or prediction: {e}")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)

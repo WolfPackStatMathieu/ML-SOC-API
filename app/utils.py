@@ -22,7 +22,7 @@ def get_model(
         Exception: If the model fetching fails, an exception is raised with an
         error message.
     """
-
+    
     try:
         model = mlflow.pyfunc.load_model(
             model_uri=f"models:/{model_name}/{model_version}"
