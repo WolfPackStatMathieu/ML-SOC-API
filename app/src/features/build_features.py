@@ -49,8 +49,10 @@ def build_features(data):
     pd.DataFrame: The features.
     pd.Series: The target variable.
     """
+
+    print("Colonnes avant la transformation dans 'build_features':")
+    print(data.columns)
     feature_names = [
-        "Unnamed: 0",
         "Method",
         "User-Agent",
         "Pragma",
@@ -65,27 +67,27 @@ def build_features(data):
         "connection",
         "lenght",
         "content",
-        "classification",
         "URL",
     ]
 
     X = data[feature_names]
-    X = X.rename(columns={"Unnamed: 0": "Class", "lenght": "content_length"})
+    X = X.rename(columns={"lenght": "content_length"})
 
     selected_features = [
-        "Class",
+
         "Method",
         "host",
         "cookie",
         "Accept",
         "content_length",
         "content",
-        "classification",
         "URL",
     ]
 
+    y = data["classification"]
     X = X[selected_features]
-    y = X["Class"]
+
+    print(f"Target variable 'y' (classification) avant encodage: {y.unique()}")
 
     X["content_length"] = (
         X["content_length"].astype(str).str.extract(r"(\d+)").fillna(0).astype(int)
@@ -140,13 +142,15 @@ def build_features(data):
 
     # Encode categorical features
     categorical_features = ["Method", "host", "cookie", "Accept", "content",
-                            "URL", "classification"]
+                            "URL"]
     le = LabelEncoder()
     for feature in categorical_features:
         X[feature] = le.fit_transform(X[feature].astype(str))
 
     # Encode target variable
     y = le.fit_transform(y.astype(str))
+
+    print(f"Target variable 'y' (classification) après encodage: {y}")
 
     # Ensure categorical features are treated as strings for imputation
     for feature in categorical_features:
@@ -167,5 +171,7 @@ def build_features(data):
     ]
 
     print(f"Features generated: {numeric_features + categorical_features}")
+    print("Colonnes après transformation dans 'build_features':")
+    print(X.columns)
 
-    return X.drop(columns=["Class"]), y, numeric_features, categorical_features
+    return X, y, numeric_features, categorical_features
