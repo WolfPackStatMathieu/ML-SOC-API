@@ -52,6 +52,7 @@ app = FastAPI(
     title="Request classifier",
     description="Classifier for bad or good request",
     version="0.0.1",
+    root_path="/proxy/5000"
 )
 
 
