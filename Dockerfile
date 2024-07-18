@@ -4,15 +4,18 @@ FROM ubuntu:22.04
 RUN apt-get -y update && \
     apt-get install -y python3-pip
 
-# set current work dir
+# Set the current working directory
 WORKDIR /ML-SOC-API
 
-# copy project files to the image
+# Copy project files to the image
 COPY --chown=${USERNAME}:${GROUPNAME} . .
 
-# install all the requirements and import corpus
+# Install all the requirements
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# launch the unicorn server to run the api
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app",  "--proxy-headers", "--host", "0.0.0.0", "--port", "5000"]
+# Set PYTHONPATH to include the app/src directory
+ENV PYTHONPATH="/ML-SOC-API/app/src:${PYTHONPATH}"
+
+# Launch the unicorn server to run the API
+EXPOSE 5000
+CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "5000"]
