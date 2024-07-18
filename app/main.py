@@ -90,7 +90,7 @@ def show_welcome_page():
     model_name = os.getenv("MLFLOW_MODEL_NAME", MODEL_NAME)
     model_version = os.getenv("MLFLOW_MODEL_VERSION", str(VERSION))
     return {
-        "message": "Request classifier",
+        "message": "Hello from Request classifier",
         "model_name": model_name,
         "model_version": model_version,
     }
