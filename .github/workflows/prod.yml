@@ -1,0 +1,81 @@
+name: CI/CD Pipeline
+
+# Déclenche le workflow sur les pushs vers les branches 'main' et 'dev'
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*'
+
+# Définition des jobs du workflow
+jobs:
+  # Job pour tester le code
+  test:
+    runs-on: ubuntu-latest  # Utilise un runner Ubuntu
+
+    steps:
+      # Étape pour vérifier le code source du dépôt
+      - uses: actions/checkout@v4
+
+      # Étape pour configurer Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'  # Utilise la dernière version mineure de Python 3
+
+      # Étape pour installer les dépendances du projet
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip  # Met à jour pip
+          pip install -r requirements.txt  # Installe les dépendances à partir du fichier requirements.txt
+          pip install pylint  # Installe pylint pour l'analyse statique du code
+
+      # Étape pour analyser statiquement le code avec pylint
+      - name: Lint
+        run: |
+          pylint src --fail-under=6  # Analyse le code dans le répertoire 'src' et échoue si le score est inférieur à 6
+
+      # Étape pour exécuter les tests Python
+      - name: Test Python code
+        run: python train.py  # Exécute le script 'train.py' pour tester le code
+
+  # Job pour construire et déployer l'image Docker, qui dépend du job 'test'
+  build-and-deploy:
+    needs: test  # S'exécute seulement si le job 'test' réussit
+    runs-on: ubuntu-latest  # Utilise un runner Ubuntu
+
+    steps:
+      # Étape pour vérifier le code source du dépôt
+      - uses: actions/checkout@v4
+
+      # Étape pour configurer QEMU pour l'émulation multi-architecture
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Étape pour configurer Docker Buildx pour la construction multi-architecture
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Étape pour générer les métadonnées Docker (tags et labels)
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: wolfpackstatmathieu/application-correction  # Nom de l'image Docker
+
+      # Étape pour se connecter à Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # Nom d'utilisateur Docker Hub, stocké dans les secrets GitHub
+          password: ${{ secrets.DOCKERHUB_TOKEN }}  # Mot de passe Docker Hub, stocké dans les secrets GitHub
+
+      # Étape pour construire et pousser l'image Docker vers Docker Hub
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true  # Pousse l'image construite vers Docker Hub
+          tags: wolfpackstatmathieu/ym-api #${{ steps.meta.outputs.tags }}  # Utilise les tags générés par l'étape Docker meta
+          labels: ${{ steps.meta.outputs.labels }}  # Utilise les labels générés par l'étape Docker meta
