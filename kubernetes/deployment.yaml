@@ -1,0 +1,30 @@
+# Creating MLflow deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: classification-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: classification-api
+  template:
+    metadata:
+      labels:
+        app: classification-api
+    spec:
+      containers:
+        - name: api
+          image: inseefrlab/formation-mlops:no-logs
+          imagePullPolicy: Always
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: https://user-mthomassin-mlflow.user.lab.sspcloud.fr
+            - name: MLFLOW_MODEL_NAME
+              value: random_forest_detection
+            - name: MLFLOW_MODEL_VERSION
+              value: "6"
+          resources:
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"

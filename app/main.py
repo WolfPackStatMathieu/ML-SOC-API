@@ -1,7 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import mlflow
 import joblib
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
         print("MLflow was not automatically discovered, a tracking URI must be provided manually.")
 
     MODEL_NAME = "random_forest_detection"
-    VERSION = 5
+    VERSION = 6
 
     model = mlflow.pyfunc.load_model(
         model_uri=f"models:/{MODEL_NAME}/{VERSION}"
@@ -86,7 +86,7 @@ app = FastAPI(
 @app.get("/", tags=["Welcome"])
 def show_welcome_page():
     MODEL_NAME = "random_forest_detection"
-    VERSION = 5
+    VERSION = 6
     model_name = os.getenv("MLFLOW_MODEL_NAME", MODEL_NAME)
     model_version = os.getenv("MLFLOW_MODEL_VERSION", str(VERSION))
     return {
@@ -148,6 +148,71 @@ async def predict(request: PredictionRequest) -> Dict:
     except Exception as e:
         print(f"Exception: {e}")
         raise HTTPException(status_code=500, detail=f"Unexpected error during transformation or prediction: {e}")
+
+
+@app.post("/predict_csv", tags=["Predict CSV"])
+async def predict_csv(file: UploadFile = File(...)) -> Dict:
+    try:
+        # Read the uploaded CSV file
+        df = pd.read_csv(file.file)
+
+        print("Données reçues pour la prédiction à partir du fichier CSV:")
+        print(df)
+
+        # Vérifier que le fichier contient les bonnes colonnes
+        expected_columns = [
+            'Method', 'User-Agent', 'Pragma', 'Cache-Control',
+            'Accept', 'Accept-encoding', 'Accept-charset', 'language', 'host',
+            'cookie', 'content-type', 'connection', 'lenght', 'content', 'URL'
+        ]
+        if not all(col in df.columns for col in expected_columns):
+            raise HTTPException(status_code=400, detail="Le fichier CSV ne contient pas les colonnes nécessaires")
+
+        # Ajouter la colonne 'classification' avec une valeur par défaut
+        df['classification'] = 0  # ou une autre valeur par défaut
+
+        # Afficher les colonnes avant transformation
+        print("Colonnes avant transformation:")
+        print(df.columns)
+
+        # Appliquer les transformations de prétraitement
+        feature_builder = complete_pipeline.named_steps['feature_builder']
+        X_transformed, _ = feature_builder.transform(df)
+
+        if isinstance(X_transformed, pd.DataFrame):
+            print(f"Colonnes après feature_builder.transform: {X_transformed.columns}")
+        else:
+            print(f"Forme de X_transformed: {X_transformed.shape}")
+
+        preprocessor = complete_pipeline.named_steps['preprocessor']
+        X = preprocessor.transform(X_transformed)
+
+        print("Forme de X après preprocessor.transform:", X.shape)
+
+        # Prédiction
+        predictions = model.predict(X)
+
+        # Préparer la réponse
+        response = []
+        urls = df['URL'].tolist()
+        for i, prediction in enumerate(predictions):
+            url = urls[i].split(" ")[0]  # Extraire l'URL avant " HTTP/1.1"
+            response.append({"url": url, "prediction": int(prediction)})
+
+        return {"predictions": response}
+
+    except ValueError as e:
+        print(f"ValueError: {e}")
+        raise HTTPException(status_code=400, detail=f"ValueError during transformation or prediction: {e}")
+    except KeyError as e:
+        print(f"KeyError: {e}")
+        raise HTTPException(status_code=400, detail=f"KeyError during transformation ou prediction: {e}")
+    except Exception as e:
+        print(f"Exception: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error during transformation or prediction: {e}")
+
+
+
 
 if __name__ == "__main__":
     import uvicorn
