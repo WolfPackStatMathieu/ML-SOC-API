@@ -6,8 +6,8 @@ from pydantic import BaseModel
 import mlflow
 import joblib
 import pandas as pd
+from app.utils import get_model
 
-from utils import get_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

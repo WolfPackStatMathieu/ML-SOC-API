@@ -13,8 +13,8 @@ COPY --chown=${USERNAME}:${GROUPNAME} . .
 # Install all the requirements
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Set PYTHONPATH to include the app/src directory
-ENV PYTHONPATH="/ML-SOC-API/app/src:${PYTHONPATH}"
+# Set PYTHONPATH to include the app directory
+ENV PYTHONPATH="/ML-SOC-API/app:${PYTHONPATH}"
 
 # Launch the unicorn server to run the API
 EXPOSE 5000
