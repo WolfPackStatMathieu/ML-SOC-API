@@ -78,7 +78,7 @@ class PredictionRequest(BaseModel):
 app = FastAPI(
     lifespan=lifespan,
     title="Request classifier",
-    description="Classifier for bad or good request",
+    description="<b>Classifier for bad or good request</b>",
     version="0.0.1",
     root_path="/proxy/5000"
 )

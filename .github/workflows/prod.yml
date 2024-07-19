@@ -7,7 +7,7 @@ on:
       - main
       - dev
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 # Définition des jobs du workflow
 jobs:
