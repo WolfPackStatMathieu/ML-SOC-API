@@ -79,7 +79,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="Request classifier",
     description="<b>Classifier for bad or good request</b>",
-    version="0.0.1",
+    version="1.0.0",
     root_path="/proxy/5000"
 )
 
