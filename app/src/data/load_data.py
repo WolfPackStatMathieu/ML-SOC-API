@@ -14,7 +14,7 @@ Functions:
 - load_csv_data(filepath): Loads the data from the specified CSV file path.
 """
 
-import pandas as pd
+import pandas as pd  # Importation de la bibliothèque pandas pour manipuler les données
 
 
 def load_csv_data(filepath):
@@ -26,5 +26,8 @@ def load_csv_data(filepath):
     
     Returns:
     pd.DataFrame: The loaded data as a DataFrame.
+    
+    This function reads the CSV file from the specified path and loads it
+    into a pandas DataFrame.
     """
-    return pd.read_csv(filepath)
+    return pd.read_csv(filepath)  # Lecture du fichier CSV et chargement dans un DataFrame
