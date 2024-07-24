@@ -117,3 +117,45 @@ Le schéma suivant illustre les étapes du processus :
 
 6. **DockerHub** :
    - L'image Docker est stockée et disponible sur DockerHub.
+
+### Configuration de GitHub Actions
+
+Le fichier YAML suivant configure le workflow GitHub Actions pour automatiser ce processus :
+
+```yaml
+name: Build and Deploy Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
