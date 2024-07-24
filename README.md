@@ -5,6 +5,12 @@ Ce projet fournit une API pour classer les requêtes en utilisant un modèle Ran
 
 ## Endpoints de l'API
 
+### Diagramme des Endpoints
+
+Le schéma suivant illustre les interactions des endpoints de l'API :
+
+![Diagramme de Cas d'Utilisation](documentation/Diagramme-de-Cas-d-Utilisation.png)
+
 1. **GET /** :
    - **Description** : Retourne un message de bienvenue avec les détails du modèle.
    - **Exemple de réponse** :
@@ -59,11 +65,7 @@ Ce projet fournit une API pour classer les requêtes en utilisant un modèle Ran
      }
      ```
 
-### Diagramme des Endpoints
 
-Le schéma suivant illustre les interactions des endpoints de l'API :
-
-![Diagramme de Cas d'Utilisation](documentation/Diagramme-de-Cas-d-Utilisation.png)
 
 
 ## Interactions de l'API
