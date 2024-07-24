@@ -90,3 +90,30 @@ Le schéma suivant illustre les interactions entre l'API, le stockage S3 et le s
 - **Charger le pipeline de prétraitement** : L'API FastAPI télécharge le pipeline de prétraitement depuis le stockage S3.
 - **Charger le modèle** : L'API FastAPI charge le modèle de classification depuis le serveur MLflow.
 
+## Processus de Construction et de Déploiement Docker
+
+Ce projet utilise GitHub Actions pour automatiser la construction et le déploiement d'une image Docker sur DockerHub.
+
+### Schéma du Processus
+
+Le schéma suivant illustre les étapes du processus :
+
+![Processus de Construction et de Déploiement Docker](documentation/pipeline_ci_cd_schema_expanded.png)
+
+1. **Code Repository** :
+   - Le code source est hébergé dans un dépôt GitHub.
+   
+2. **CI/CD Pipeline** :
+   - GitHub Actions est utilisé pour automatiser le processus de construction et de déploiement.
+   
+3. **QEMU Setup** :
+   - Configuration de QEMU pour l'émulation multi-architecture.
+
+4. **Buildx Setup** :
+   - Configuration de Docker Buildx pour la construction multi-architecture.
+   
+5. **Docker Build & Push** :
+   - Construction de l'image Docker et déploiement sur DockerHub.
+
+6. **DockerHub** :
+   - L'image Docker est stockée et disponible sur DockerHub.
